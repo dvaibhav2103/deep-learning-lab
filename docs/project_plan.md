@@ -2,13 +2,22 @@
 
 ## Title
 
-Tracklet Repair and Conservative Merging for More Stable Single-Camera Tracking
+Tracklet Fragmentation Analysis and Repair for Single-Camera Tracking
 
 ## Motivation
 
 Single-camera tracking quality strongly affects the later multi-camera
 association stage. Fragmented tracklets and avoidable ID switches can create
 noisy identity candidates across cameras.
+
+## Current Contribution
+
+This project currently provides a lightweight post-processing pipeline for
+single-camera tracking outputs, starting with tracklet analysis and short-gap
+interpolation.
+
+The implemented result is verified on a synthetic sample. No improvement on real
+tracking data is claimed yet.
 
 ## Main Questions
 
@@ -17,14 +26,20 @@ noisy identity candidates across cameras.
 - Can fragmented tracklets be merged conservatively enough to improve stability?
 - Which metrics best capture the improvement for this project?
 
-## Milestones
+## Completed Work
 
-1. Prepare data loading and baseline analysis.
-2. Measure tracklet fragmentation and simple consistency statistics.
-3. Implement short-gap repair.
-4. Implement conservative merging.
-5. Evaluate baseline versus repaired outputs.
-6. Write final report and summarize limitations.
+- Created the project scaffold on branch `hakan/project-setup`.
+- Added MOT-style tracking file loading and validation.
+- Added basic tracklet statistics.
+- Added short-gap interpolation for internal gaps within the same `track_id`.
+
+## Planned Next Steps
+
+1. Conservative tracklet merging.
+2. Baseline vs repaired comparison script.
+3. Visual failure-case examples.
+4. Real BoT-SORT output or project dataset integration.
+5. Final evaluation tables for paper and presentation.
 
 ## Risks
 
