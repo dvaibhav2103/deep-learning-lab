@@ -12,6 +12,7 @@ data/
 results/**/*.csv
 results/**/*.json
 results/**/*.txt
+results/**/*.md
 results/**/*.png
 results/**/*.pdf
 

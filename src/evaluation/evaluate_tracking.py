@@ -1,65 +1,164 @@
-"""Command-line entry point for tracking evaluation.
-
-The full metric implementation is intentionally left as future work. This file
-keeps the expected interface visible from the start of the project.
-"""
+"""Compare baseline and repaired tracking outputs."""
 
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
-from src.utils.config import load_config
-from src.utils.io import load_tracks
+import pandas as pd
+
+from src.analysis.analyze_tracklets import compute_tracklet_statistics
+from src.utils.io import load_tracking_file
 
 
-def compute_placeholder_metrics(num_predictions: int, num_ground_truth: int) -> dict[str, float]:
-    """Compute simple placeholder metrics.
+KEY_METRICS = [
+    "total_detections",
+    "num_tracklets",
+    "mean_tracklet_length",
+    "median_tracklet_length",
+    "num_short_tracklets",
+    "percent_short_tracklets",
+    "num_tracklets_with_gaps",
+    "total_internal_gaps",
+]
 
-    Args:
-        num_predictions: Number of predicted tracking rows.
-        num_ground_truth: Number of ground-truth rows.
 
-    Returns:
-        A dictionary with basic counts.
+def compare_tracking_outputs(
+    baseline_df: pd.DataFrame,
+    repaired_df: pd.DataFrame,
+    short_tracklet_threshold: int = 10,
+) -> dict:
+    """Compare tracklet statistics before and after post-processing."""
+    baseline_stats = compute_tracklet_statistics(baseline_df, short_tracklet_threshold)
+    repaired_stats = compute_tracklet_statistics(repaired_df, short_tracklet_threshold)
 
-    TODO:
-        Replace this with MOT metrics such as MOTA, IDF1, HOTA, ID switches,
-        false positives, and false negatives.
-    """
+    differences = {}
+    relative_changes = {}
+    for metric in KEY_METRICS:
+        baseline_value = baseline_stats[metric]
+        repaired_value = repaired_stats[metric]
+        differences[f"{metric}_diff"] = repaired_value - baseline_value
+        relative_changes[f"{metric}_relative_change_percent"] = _relative_change(
+            baseline_value,
+            repaired_value,
+        )
+
     return {
-        "num_predictions": float(num_predictions),
-        "num_ground_truth": float(num_ground_truth),
+        "baseline": baseline_stats,
+        "repaired": repaired_stats,
+        "differences": differences,
+        "relative_changes": relative_changes,
     }
 
 
-def run_evaluation(config_path: Path) -> dict[str, float]:
-    """Load predictions and ground truth, then compute placeholder metrics."""
-    config = load_config(config_path)
+def save_markdown_table(comparison: dict, output_path: Path) -> None:
+    """Save a compact Markdown before/after table."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    predictions = load_tracks(Path(config["data"]["input_tracks_path"]))
-    ground_truth = load_tracks(Path(config["data"].get("ground_truth_path", "data/ground_truth.csv")))
+    lines = [
+        "# Tracking Output Comparison",
+        "",
+        "Tracklet-level comparison between the baseline and repaired outputs.",
+        "",
+        "| metric | baseline | repaired | diff |",
+        "| --- | ---: | ---: | ---: |",
+    ]
 
-    metrics = compute_placeholder_metrics(
-        num_predictions=len(predictions),
-        num_ground_truth=len(ground_truth),
-    )
+    for metric in KEY_METRICS:
+        baseline_value = comparison["baseline"][metric]
+        repaired_value = comparison["repaired"][metric]
+        diff_value = comparison["differences"][f"{metric}_diff"]
+        lines.append(
+            f"| {metric} | {_format_value(baseline_value)} | "
+            f"{_format_value(repaired_value)} | {_format_value(diff_value)} |"
+        )
 
-    print("Evaluation summary")
-    for key, value in metrics.items():
-        print(f"- {key}: {value}")
+    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    return metrics
+
+def run_evaluation(
+    baseline_path: Path,
+    repaired_path: Path,
+    output_json_path: Path,
+    output_md_path: Path,
+    short_threshold: int,
+) -> dict:
+    """Load two tracking outputs and write comparison summaries."""
+    baseline = load_tracking_file(str(baseline_path))
+    repaired = load_tracking_file(str(repaired_path))
+    comparison = compare_tracking_outputs(baseline, repaired, short_threshold)
+
+    output_json_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_json_path.open("w", encoding="utf-8") as file:
+        json.dump(comparison, file, indent=2)
+        file.write("\n")
+
+    save_markdown_table(comparison, output_md_path)
+
+    print("Tracking comparison summary")
+    for metric in KEY_METRICS:
+        baseline_value = comparison["baseline"][metric]
+        repaired_value = comparison["repaired"][metric]
+        diff_value = comparison["differences"][f"{metric}_diff"]
+        print(
+            f"- {metric}: baseline {_format_value(baseline_value)}, "
+            f"repaired {_format_value(repaired_value)}, diff {_format_value(diff_value)}"
+        )
+    print(f"saved JSON to {output_json_path}")
+    print(f"saved Markdown to {output_md_path}")
+
+    return comparison
+
+
+def _relative_change(baseline_value: float, repaired_value: float) -> float | None:
+    """Return percent change, or None when the baseline is zero."""
+    if baseline_value == 0:
+        return None
+    return float((repaired_value - baseline_value) / baseline_value * 100)
+
+
+def _format_value(value: object) -> str:
+    """Format numbers for readable console and Markdown output."""
+    if isinstance(value, float):
+        return f"{value:.2f}"
+    if value is None:
+        return "n/a"
+    return str(value)
 
 
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(description="Evaluate tracking outputs.")
+    parser = argparse.ArgumentParser(description="Compare tracking outputs.")
     parser.add_argument(
-        "--config",
+        "--baseline",
         type=Path,
-        default=Path("configs/postprocess.yaml"),
-        help="Path to a YAML config containing prediction and ground-truth paths.",
+        required=True,
+        help="Path to the original tracking file.",
+    )
+    parser.add_argument(
+        "--repaired",
+        type=Path,
+        required=True,
+        help="Path to the repaired tracking file.",
+    )
+    parser.add_argument(
+        "--output-json",
+        type=Path,
+        required=True,
+        help="Path where the JSON comparison should be saved.",
+    )
+    parser.add_argument(
+        "--output-md",
+        type=Path,
+        required=True,
+        help="Path where the Markdown comparison should be saved.",
+    )
+    parser.add_argument(
+        "--short-threshold",
+        type=int,
+        default=10,
+        help="Tracklets with this many detections or fewer count as short.",
     )
     return parser.parse_args()
 
@@ -67,7 +166,13 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """Run the evaluation command."""
     args = parse_args()
-    run_evaluation(args.config)
+    run_evaluation(
+        args.baseline,
+        args.repaired,
+        args.output_json,
+        args.output_md,
+        args.short_threshold,
+    )
 
 
 if __name__ == "__main__":

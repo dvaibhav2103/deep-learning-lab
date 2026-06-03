@@ -113,6 +113,12 @@ Run the evaluation placeholder:
 bash scripts/run_evaluation.sh
 ```
 
+Compare baseline and repaired sample outputs:
+
+```bash
+python -m src.evaluation.evaluate_tracking --baseline examples/sample_fragmented_tracks.txt --repaired results/postprocess/fragmented_repaired.txt --output-json results/evaluation/fragmented_comparison.json --output-md results/evaluation/fragmented_comparison.md --short-threshold 10
+```
+
 The scripts currently use the example paths defined in the config files. Update
 the paths in `configs/baseline.yaml` and `configs/postprocess.yaml` once real
 tracking data is available.
