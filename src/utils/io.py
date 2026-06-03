@@ -77,11 +77,12 @@ def validate_tracking_dataframe(df: pd.DataFrame) -> None:
 def save_tracking_file(df: pd.DataFrame, path: str) -> None:
     """Save tracking data as a comma-separated text file without a header."""
     output_path = Path(path)
-    validate_tracking_dataframe(df)
+    tracks = df.copy()
+    validate_tracking_dataframe(tracks)
 
-    sorted_df = df.sort_values(["frame_id", "track_id"]).reset_index(drop=True)
+    sorted_df = tracks.sort_values(["frame_id", "track_id"]).reset_index(drop=True)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    sorted_df.to_csv(output_path, index=False, header=False)
+    sorted_df[TRACK_COLUMNS].to_csv(output_path, index=False, header=False)
 
 
 def load_tracks(path: Path) -> pd.DataFrame:

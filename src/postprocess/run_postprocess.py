@@ -5,45 +5,44 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.postprocess.merge import conservative_merge
-from src.postprocess.repair import repair_short_gaps
-from src.utils.config import load_config
-from src.utils.io import load_tracks, save_tracks
+from src.postprocess.repair import interpolate_track_gaps
+from src.utils.io import load_tracking_file, save_tracking_file
 
 
-def run_postprocess(config_path: Path) -> None:
-    """Run the placeholder repair and merge pipeline."""
-    config = load_config(config_path)
+def run_postprocess(input_path: Path, output_path: Path, max_gap: int) -> None:
+    """Run short-gap interpolation and save the repaired tracks."""
+    tracks = load_tracking_file(str(input_path))
+    repaired_tracks = interpolate_track_gaps(tracks, max_gap=max_gap)
 
-    input_path = Path(config["data"]["input_tracks_path"])
-    output_path = Path(config["data"]["output_tracks_path"])
+    save_tracking_file(repaired_tracks, str(output_path))
 
-    tracks = load_tracks(input_path)
-
-    if config["repair"]["enabled"]:
-        tracks = repair_short_gaps(
-            tracks,
-            max_gap_frames=int(config["repair"]["max_gap_frames"]),
-        )
-
-    if config["merge"]["enabled"]:
-        tracks = conservative_merge(
-            tracks,
-            min_similarity_score=float(config["merge"]["min_similarity_score"]),
-        )
-
-    save_tracks(tracks, output_path)
-    print(f"Saved post-processed tracks to {output_path}")
+    num_interpolated = int(repaired_tracks["is_interpolated"].sum())
+    print(f"original detections: {len(tracks)}")
+    print(f"repaired detections: {len(repaired_tracks)}")
+    print(f"interpolated detections: {num_interpolated}")
+    print(f"saved repaired tracks to {output_path}")
 
 
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Run tracklet post-processing.")
     parser.add_argument(
-        "--config",
+        "--input",
         type=Path,
-        default=Path("configs/postprocess.yaml"),
-        help="Path to the post-processing YAML config.",
+        required=True,
+        help="Path to a comma-separated tracking text file.",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help="Path where the repaired tracking file should be saved.",
+    )
+    parser.add_argument(
+        "--max-gap",
+        type=int,
+        default=5,
+        help="Maximum number of missing frames to interpolate.",
     )
     return parser.parse_args()
 
@@ -51,7 +50,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """Run the post-processing command."""
     args = parse_args()
-    run_postprocess(args.config)
+    run_postprocess(args.input, args.output, args.max_gap)
 
 
 if __name__ == "__main__":

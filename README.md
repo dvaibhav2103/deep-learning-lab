@@ -101,6 +101,12 @@ Run the post-processing placeholder:
 bash scripts/run_postprocess.sh
 ```
 
+Run short-gap interpolation on the sample tracks:
+
+```bash
+python -m src.postprocess.run_postprocess --input examples/sample_tracks.txt --output results/postprocess/sample_repaired.txt --max-gap 5
+```
+
 Run the evaluation placeholder:
 
 ```bash
