@@ -14,7 +14,7 @@ noisy identity candidates across cameras.
 
 This project currently provides a lightweight post-processing pipeline for
 single-camera tracking outputs, starting with tracklet analysis, short-gap
-interpolation, and conservative merging.
+interpolation, conservative merging, and a baseline vs repaired comparison.
 
 The implemented result is verified on a synthetic sample. No improvement on real
 tracking data is claimed yet.
@@ -32,13 +32,15 @@ tracking data is claimed yet.
 - Tracklet statistics analysis.
 - Short-gap interpolation.
 - Conservative tracklet merging.
+- Baseline vs repaired comparison script.
 
 ## Planned Next Steps
 
-1. Baseline vs repaired comparison script.
-2. Visual failure-case examples.
-3. Integration with real BoT-SORT output or project dataset.
-4. Final evaluation tables for paper and presentation.
+1. Integrate real BoT-SORT output or project dataset.
+2. Run the full pipeline on real tracking files.
+3. Add visual failure-case examples.
+4. Optionally add TrackEval/MOT metrics if ground truth is available.
+5. Prepare final result tables for paper and presentation.
 
 ## Risks
 

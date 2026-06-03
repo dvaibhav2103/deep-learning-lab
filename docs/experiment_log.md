@@ -106,3 +106,41 @@ Analysis after repair:
 The synthetic fragmented identity was merged into one longer tracklet, while
 the number of detections increased because the remaining short gap was
 interpolated.
+
+## Baseline vs Repaired Comparison
+
+Implemented a comparison script for baseline and repaired tracking outputs.
+
+Test baseline:
+
+```bash
+examples/sample_fragmented_tracks.txt
+```
+
+Test repaired output:
+
+```bash
+results/postprocess/fragmented_repaired.txt
+```
+
+Test command:
+
+```bash
+python -m src.evaluation.evaluate_tracking --baseline examples/sample_fragmented_tracks.txt --repaired results/postprocess/fragmented_repaired.txt --output-json results/evaluation/fragmented_comparison.json --output-md results/evaluation/fragmented_comparison.md --short-threshold 10
+```
+
+Main comparison result:
+
+- `total_detections`: 12 -> 14, diff +2
+- `num_tracklets`: 4 -> 3, diff -1
+- `mean_tracklet_length`: 3.00 -> 4.67, diff +1.67
+- `median_tracklet_length`: 3.00 -> 3.00, diff 0.00
+- `num_short_tracklets`: 4 -> 3, diff -1
+- `percent_short_tracklets`: 100.00 -> 100.00, diff 0.00
+- `num_tracklets_with_gaps`: 0 -> 0, diff 0
+- `total_internal_gaps`: 0 -> 0, diff 0
+
+The synthetic fragmented sample shows that the repair pipeline can reduce the
+number of tracklets and increase mean tracklet length. The added detections come
+from interpolation. This is still a synthetic sanity check, not a real-data
+result.

@@ -67,6 +67,15 @@ The method prefers safe merges over aggressive merges. It does not yet use
 appearance embeddings or ReID features, so it may miss difficult merges when
 objects move quickly or detection boxes shift strongly.
 
+## Evaluation Comparison
+
+The evaluation script compares baseline and repaired tracking files using the
+same tracklet statistics. It reports absolute differences as repaired minus
+baseline and computes relative percentage changes where meaningful.
+
+This is a tracklet-level comparison. It does not replace full MOT metrics such
+as IDF1, HOTA, or MOTA when ground truth is available.
+
 ## TODO
 
 - Record examples of successful and failed repairs.
