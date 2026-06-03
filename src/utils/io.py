@@ -7,36 +7,88 @@ from pathlib import Path
 import pandas as pd
 
 
-TRACK_COLUMNS = ["frame", "track_id", "x", "y", "w", "h", "score", "camera_id"]
+TRACK_COLUMNS = [
+    "frame_id",
+    "track_id",
+    "x",
+    "y",
+    "width",
+    "height",
+    "score",
+    "class_id",
+]
+
+
+def load_tracking_file(path: str) -> pd.DataFrame:
+    """Load a comma-separated tracking text file.
+
+    Args:
+        path: Path to a MOT-style text file without a header row.
+
+    Returns:
+        A sorted DataFrame with the expected tracking columns.
+    """
+    file_path = Path(path)
+    if not file_path.exists():
+        raise FileNotFoundError(f"Tracking file not found: {file_path}")
+
+    try:
+        df = pd.read_csv(file_path, header=None, sep=",", skipinitialspace=True)
+    except pd.errors.EmptyDataError as error:
+        raise ValueError(f"Tracking file is empty: {file_path}") from error
+
+    if df.shape[1] != len(TRACK_COLUMNS):
+        raise ValueError(
+            f"Expected {len(TRACK_COLUMNS)} columns in {file_path}, "
+            f"but found {df.shape[1]}."
+        )
+
+    df.columns = TRACK_COLUMNS
+    validate_tracking_dataframe(df)
+
+    df = df.sort_values(["frame_id", "track_id"]).reset_index(drop=True)
+    return df
+
+
+def validate_tracking_dataframe(df: pd.DataFrame) -> None:
+    """Validate and convert tracking columns in place."""
+    missing_columns = [column for column in TRACK_COLUMNS if column not in df.columns]
+    if missing_columns:
+        raise ValueError(f"Missing required tracking columns: {missing_columns}")
+
+    if df[TRACK_COLUMNS].isna().any().any():
+        raise ValueError("Tracking data contains missing values.")
+
+    for column in TRACK_COLUMNS:
+        converted = pd.to_numeric(df[column], errors="coerce")
+        invalid_mask = converted.isna()
+        if invalid_mask.any():
+            bad_value = df.loc[invalid_mask, column].iloc[0]
+            raise ValueError(f"Invalid numeric value in column '{column}': {bad_value}")
+        df[column] = converted
+
+    integer_columns = ["frame_id", "track_id", "class_id"]
+    for column in integer_columns:
+        if not (df[column] % 1 == 0).all():
+            raise ValueError(f"Column '{column}' must contain integer values.")
+        df[column] = df[column].astype(int)
+
+
+def save_tracking_file(df: pd.DataFrame, path: str) -> None:
+    """Save tracking data as a comma-separated text file without a header."""
+    output_path = Path(path)
+    validate_tracking_dataframe(df)
+
+    sorted_df = df.sort_values(["frame_id", "track_id"]).reset_index(drop=True)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    sorted_df.to_csv(output_path, index=False, header=False)
 
 
 def load_tracks(path: Path) -> pd.DataFrame:
-    """Load tracking data from a CSV file.
-
-    Args:
-        path: Path to a CSV tracking file.
-
-    Returns:
-        A pandas DataFrame with the expected tracking columns. If the file does
-        not exist yet, an empty DataFrame is returned so starter scripts remain
-        runnable before data is added.
-
-    TODO:
-        Add support for MOTChallenge text files and stricter schema validation.
-    """
-    if not path.exists():
-        print(f"Warning: tracking file not found, returning empty data: {path}")
-        return pd.DataFrame(columns=TRACK_COLUMNS)
-
-    tracks = pd.read_csv(path)
-    missing_columns = [column for column in TRACK_COLUMNS if column not in tracks.columns]
-    if missing_columns:
-        raise ValueError(f"Missing required tracking columns in {path}: {missing_columns}")
-
-    return tracks
+    """Compatibility wrapper for older scaffold modules."""
+    return load_tracking_file(str(path))
 
 
 def save_tracks(tracks: pd.DataFrame, path: Path) -> None:
-    """Save tracking data to a CSV file."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tracks.to_csv(path, index=False)
+    """Compatibility wrapper for older scaffold modules."""
+    save_tracking_file(tracks, str(path))
