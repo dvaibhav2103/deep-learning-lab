@@ -13,8 +13,8 @@ noisy identity candidates across cameras.
 ## Current Contribution
 
 This project currently provides a lightweight post-processing pipeline for
-single-camera tracking outputs, starting with tracklet analysis and short-gap
-interpolation.
+single-camera tracking outputs, starting with tracklet analysis, short-gap
+interpolation, and conservative merging.
 
 The implemented result is verified on a synthetic sample. No improvement on real
 tracking data is claimed yet.
@@ -28,18 +28,17 @@ tracking data is claimed yet.
 
 ## Completed Work
 
-- Created the project scaffold on branch `hakan/project-setup`.
-- Added MOT-style tracking file loading and validation.
-- Added basic tracklet statistics.
-- Added short-gap interpolation for internal gaps within the same `track_id`.
+- Project scaffold.
+- Tracklet statistics analysis.
+- Short-gap interpolation.
+- Conservative tracklet merging.
 
 ## Planned Next Steps
 
-1. Conservative tracklet merging.
-2. Baseline vs repaired comparison script.
-3. Visual failure-case examples.
-4. Real BoT-SORT output or project dataset integration.
-5. Final evaluation tables for paper and presentation.
+1. Baseline vs repaired comparison script.
+2. Visual failure-case examples.
+3. Integration with real BoT-SORT output or project dataset.
+4. Final evaluation tables for paper and presentation.
 
 ## Risks
 

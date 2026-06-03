@@ -15,9 +15,10 @@ frame_id, track_id, x, y, width, height, score, class_id
 
 1. Load MOT-style tracking output.
 2. Compute tracklet-level statistics.
-3. Detect small internal gaps inside each `track_id`.
-4. Fill short gaps with linear interpolation of `x`, `y`, `width`, and `height`.
-5. Save repaired tracking output in the same standard format.
+3. Optionally merge conservative tracklet candidates.
+4. Detect small internal gaps inside each `track_id`.
+5. Fill short gaps with linear interpolation of `x`, `y`, `width`, and `height`.
+6. Save repaired tracking output in the same standard format.
 
 ## Tracklet Analysis
 
@@ -52,17 +53,21 @@ It does not solve fragmented identities where the object receives a new
 
 ## Conservative Merging
 
-The next method step is conservative tracklet merging. Merging should be strict
-because incorrect merges create identity errors. Possible evidence:
+The current merging step tries to connect fragmented tracklets only when the
+match is simple and low risk. Candidate tracklets must satisfy these rules:
 
-- Non-overlapping time ranges or very short temporal gap.
-- Spatial continuity.
-- Similar motion direction.
-- Similar appearance embedding, if available.
-- No duplicate identity conflict in the same frame.
+- They must not overlap in time.
+- The temporal gap must be at most `max_merge_gap`.
+- `class_id` must match when `require_same_class` is enabled.
+- The center of the first tracklet's last box and the second tracklet's first
+  box must be close.
+- Width and height ratios must stay within `max_size_ratio`.
+
+The method prefers safe merges over aggressive merges. It does not yet use
+appearance embeddings or ReID features, so it may miss difficult merges when
+objects move quickly or detection boxes shift strongly.
 
 ## TODO
 
 - Record examples of successful and failed repairs.
-- Implement conservative merging.
 - Compare baseline and repaired outputs on real tracking data.
